@@ -5,11 +5,12 @@
 # Currently there's cpu, disk and networking usage.
 # Written by Stephane Fontaine (esselfe) under the GPLv3.
 
-ITEM_WIDTH=20
+[ -z "$ITEM_WIDTH" ] && ITEM_WIDTH=20
+[ -z "$SHOW_LABELS" ] && SHOW_LABELS="1"
 
-CELL_BUSY='#'
-CELL_IDLE='='
-echo "$LANG" | grep -q -i "utf" && {
+[ -z "$CELL_BUSY" ] && CELL_BUSY='#'
+[ -z "$CELL_IDLE" ] && CELL_IDLE='='
+[ -z "$NO_UTF8" ] && {
     CELL_BUSY='█'
     CELL_IDLE='▒'
 }
@@ -33,8 +34,8 @@ CPU_TICKS_TOTAL_DIFF=0
 
 CPU_PERCENT_PER_CELL=$((100 / $ITEM_WIDTH))
 
-DISK_DEVICE=sda
-#DISK_DEVICE=nvme0n1
+[ -z "$DISK_DEVICE" ] && DISK_DEVICE=sda
+#[ -z "$DISK_DEVICE" ] && DISK_DEVICE=nvme0n1
 DISK_IO_MSEC=$(awk '{ print $10 }' /sys/block/$DISK_DEVICE/stat)
 DISK_IO_MSEC_PREV=$DISK_IO_MSEC
 DISK_IO_MSEC_DIFF=0
@@ -49,13 +50,14 @@ MEM_MB_PER_CELL=$((MEM_MB_TOTAL / ITEM_WIDTH))
 
 # See your available devices in /sys/class/net
 # Autodetect based on the configured route.
-NET_DEVICE="$(ip route show default | grep -Eo ' dev [a-z0-9]+ ' | sed 's/ dev //;s/ //g' | tr -d '\n')"
+[ -z "$NET_DEVICE" ] &&
+	NET_DEVICE="$(ip route show default | grep -Eo ' dev [a-z0-9]+ ' | sed 's/ dev //;s/ //g' | tr -d '\n')"
 #NET_DEVICE=eth0
 #NET_DEVICE=wlan0
 #NET_DEVICE=enp3s0
 #NET_DEVICE=wlp12s0
 
-NET_RXTX_MAX=1500000
+[ -z "$NET_RXTX_MAX" ] && NET_RXTX_MAX=1500000
 NET_RX_BYTES=0
 NET_TX_BYTES=0
 NET_TOTAL_BYTES=0
@@ -162,7 +164,11 @@ while true; do
 		((++cnt))
 	done
 
-	printf "CPU: $CPU_STR Mem: $MEM_STR Disk: $DISK_STR Net: $NET_STR $CURRENT_TIME\n"
+	if [[ "$SHOW_LABELS" == "1" ]]; then
+		printf "CPU: $CPU_STR Mem: $MEM_STR Disk: $DISK_STR Net: $NET_STR $CURRENT_TIME\n"
+	else
+		printf "$CPU_STR $MEM_STR $DISK_STR $NET_STR $CURRENT_TIME\n"
+	fi
 
 	sleep 1
 done
