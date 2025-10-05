@@ -2,7 +2,7 @@
 
 # 20251005
 # System usage monitor first intended for use in the sway status bar.
-# Currently there's cpu, disk and networking usage.
+# Currently there's cpu, disk, memory and networking usage.
 # Written by Stephane Fontaine (esselfe) under the GPLv3.
 
 [ -z "$ITEM_WIDTH" ] && ITEM_WIDTH=20
