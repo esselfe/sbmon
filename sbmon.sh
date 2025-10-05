@@ -23,7 +23,7 @@ CPU_TICKS_BUSY=$(head -n1 /proc/stat |
 CPU_TICKS_BUSY_PREV=$CPU_TICKS_BUSY
 CPU_TICKS_BUSY_DIFF=0
 
-CPU_TICKS_IDLE=$(head -n1 /proc/stat | awk '{ print $5 }')
+CPU_TICKS_IDLE=$(head -n1 /proc/stat | awk '{ print $5 * 100 }')
 CPU_TICKS_IDLE_PREV=$CPU_TICKS_IDLE
 CPU_TICKS_IDLE_DIFF=0
 
@@ -62,7 +62,7 @@ update_cpu() {
 	CPU_TICKS_BUSY_DIFF=$((CPU_TICKS_BUSY - CPU_TICKS_BUSY_PREV))
 	CPU_TICKS_BUSY_PREV=$CPU_TICKS_BUSY
 
-	CPU_TICKS_IDLE=$(head -n1 /proc/stat | awk '{ print $5 }')
+	CPU_TICKS_IDLE=$(head -n1 /proc/stat | awk '{ print $5 * 100 }')
 	CPU_TICKS_IDLE_DIFF=$((CPU_TICKS_IDLE - CPU_TICKS_IDLE_PREV))
 	CPU_TICKS_IDLE_PREV=$CPU_TICKS_IDLE
 
