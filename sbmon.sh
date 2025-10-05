@@ -78,7 +78,6 @@ update_disk() {
 	DISK_IO_MSEC=$(awk '{ print $10 }' /sys/block/$DISK_DEVICE/stat)
 	DISK_IO_MSEC_DIFF=$((DISK_IO_MSEC - DISK_IO_MSEC_PREV))
 	DISK_IO_MSEC_PREV=$DISK_IO_MSEC
-	echo "disk io ms diff $DISK_IO_MSEC_DIFF"
 }
 update_disk
 
