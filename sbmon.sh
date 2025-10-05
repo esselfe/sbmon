@@ -7,17 +7,22 @@
 
 [ -z "$ITEM_WIDTH" ] && ITEM_WIDTH=20
 [ -z "$SHOW_LABELS" ] && SHOW_LABELS="1"
+if [ -z "$NO_UTF8" ]; then
+    [ -z "$CELL_BUSY" ] && CELL_BUSY='█'
+    [ -z "$CELL_IDLE" ] && CELL_IDLE='▒'
+else
+    [ -z "$CELL_BUSY" ] && CELL_BUSY='#'
+    [ -z "$CELL_IDLE" ] && CELL_IDLE='='
+fi
+[ -z "$TIMESTRFMT" ] && TIMESTRFMT='%A %Y-%m-%d %H:%M:%S'
 
-[ -z "$CELL_BUSY" ] && CELL_BUSY='#'
-[ -z "$CELL_IDLE" ] && CELL_IDLE='='
-[ -z "$NO_UTF8" ] && {
-    CELL_BUSY='█'
-    CELL_IDLE='▒'
-}
+# SLEEP_TIME controls for how long to wait before the next loop iteration
+# Other potential sleep times are 10, 3, 0.5 or 0.2
+[ -z "$SLEEP_TIME" ] && SLEEP_TIME=1
 
+# See 'man 3 sysconf' for the _SC_CLK_TCK system spec.
 CPU_USER_HZ=100
 CPU_CORES=$(nproc)
-CPU_PERCENT=0
 
 CPU_TICKS_BUSY=$(head -n1 /proc/stat |
   awk '{ print ( $2 + $3 + $4 + $6 + $7 + $8 + $9 + $10 ) * 100 }')
@@ -32,6 +37,7 @@ CPU_TICKS_TOTAL=$((CPU_TICKS_BUSY + CPU_TICKS_IDLE))
 CPU_TICKS_TOTAL_PREV=$CPU_TICKS_TOTAL
 CPU_TICKS_TOTAL_DIFF=0
 
+CPU_PERCENT=0
 CPU_PERCENT_PER_CELL=$((100 / $ITEM_WIDTH))
 
 [ -z "$DISK_DEVICE" ] && DISK_DEVICE=sda
@@ -66,12 +72,14 @@ NET_BYTES_DIFF=0
 NET_BYTES_PER_CELL=$((NET_RXTX_MAX / ITEM_WIDTH))
 
 update_cpu() {
-	CPU_TICKS_BUSY=$(head -n1 /proc/stat |
+	CPU_STAT_LINE="$(head -n1 /proc/stat)"
+
+	CPU_TICKS_BUSY=$(echo "$CPU_STAT_LINE" |
 	  awk '{ print ( $2 + $3 + $4 + $6 + $7 + $8 + $9 + $10 ) * 100 }')
 	CPU_TICKS_BUSY_DIFF=$((CPU_TICKS_BUSY - CPU_TICKS_BUSY_PREV))
 	CPU_TICKS_BUSY_PREV=$CPU_TICKS_BUSY
 
-	CPU_TICKS_IDLE=$(head -n1 /proc/stat | awk '{ print $5 * 100 }')
+	CPU_TICKS_IDLE=$(echo "$CPU_STAT_LINE" | awk '{ print $5 * 100 }')
 	CPU_TICKS_IDLE_DIFF=$((CPU_TICKS_IDLE - CPU_TICKS_IDLE_PREV))
 	CPU_TICKS_IDLE_PREV=$CPU_TICKS_IDLE
 
@@ -91,9 +99,10 @@ update_disk() {
 update_disk
 
 update_mem() {
-	MEM_KB_TOTAL=$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)
+	MEM_INFO="$(cat /proc/meminfo)"
+	MEM_KB_TOTAL=$(echo "$MEM_INFO" | awk '/^MemTotal:/ { print $2 }')
 	MEM_MB_TOTAL=$((MEM_KB_TOTAL / 1024))
-	MEM_KB_FREE=$(awk '/^MemAvailable:/ { print $2 }' /proc/meminfo)
+	MEM_KB_FREE=$(echo "$MEM_INFO" | awk '/^MemAvailable:/ { print $2 }')
 	MEM_MB_FREE=$((MEM_KB_FREE / 1024))
 	MEM_MB_USED=$((MEM_MB_TOTAL - MEM_MB_FREE))
 	MEM_MB_PER_CELL=$((MEM_MB_TOTAL / ITEM_WIDTH))
@@ -110,7 +119,7 @@ update_net() {
 update_net
 
 while true; do
-	CURRENT_TIME="$(date +'%A %Y-%m-%d %H:%M:%S')"
+	CURRENT_TIME=$(date +"$TIMESTRFMT")
 
 	update_cpu
 	CPU_STR=""
@@ -170,6 +179,6 @@ while true; do
 		printf "$CPU_STR $MEM_STR $DISK_STR $NET_STR $CURRENT_TIME\n"
 	fi
 
-	sleep 1
+	sleep $SLEEP_TIME
 done
 
