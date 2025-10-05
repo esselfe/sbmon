@@ -40,6 +40,13 @@ DISK_IO_MSEC_PREV=$DISK_IO_MSEC
 DISK_IO_MSEC_DIFF=0
 DISK_IO_MSEC_PER_CELL=$((1000 / ITEM_WIDTH))
 
+MEM_KB_TOTAL=$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)
+MEM_MB_TOTAL=$((MEM_KB_TOTAL / 1024))
+MEM_KB_FREE=$(awk '/^MemAvailable:/ { print $2 }' /proc/meminfo)
+MEM_MB_FREE=$((MEM_KB_FREE / 1024))
+MEM_MB_USED=$((MEM_MB_TOTAL - MEM_MB_FREE))
+MEM_MB_PER_CELL=$((MEM_MB_TOTAL / ITEM_WIDTH))
+
 # See your available devices in /sys/class/net
 # Autodetect based on the configured route.
 NET_DEVICE="$(ip route show default | grep -Eo ' dev [a-z0-9]+ ' | sed 's/ dev //;s/ //g' | tr -d '\n')"
@@ -81,6 +88,16 @@ update_disk() {
 }
 update_disk
 
+update_mem() {
+	MEM_KB_TOTAL=$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)
+	MEM_MB_TOTAL=$((MEM_KB_TOTAL / 1024))
+	MEM_KB_FREE=$(awk '/^MemAvailable:/ { print $2 }' /proc/meminfo)
+	MEM_MB_FREE=$((MEM_KB_FREE / 1024))
+	MEM_MB_USED=$((MEM_MB_TOTAL - MEM_MB_FREE))
+	MEM_MB_PER_CELL=$((MEM_MB_TOTAL / ITEM_WIDTH))
+}
+update_mem
+
 update_net() {
 	NET_RX_BYTES=`cat /sys/class/net/$NET_DEVICE/statistics/rx_bytes`
 	NET_TX_BYTES=`cat /sys/class/net/$NET_DEVICE/statistics/tx_bytes`
@@ -119,6 +136,19 @@ while true; do
 		((++cnt))
 	done
 
+	update_mem
+	MEM_STR=""
+	cnt=1
+	while [[ $cnt -le $ITEM_WIDTH ]]; do
+		[[ $((cnt * MEM_MB_PER_CELL)) -gt $MEM_MB_USED ]] && break;
+		MEM_STR+="$CELL_BUSY"
+		((++cnt))
+	done
+	while [[ $cnt -le $ITEM_WIDTH ]]; do
+		MEM_STR+="$CELL_IDLE"
+		((++cnt))
+	done
+
 	update_net
 	NET_STR=""
 	cnt=1
@@ -132,7 +162,7 @@ while true; do
 		((++cnt))
 	done
 
-	printf "CPU: $CPU_STR Disk: $DISK_STR Net: $NET_STR $CURRENT_TIME\n"
+	printf "CPU: $CPU_STR Mem: $MEM_STR Disk: $DISK_STR Net: $NET_STR $CURRENT_TIME\n"
 
 	sleep 1
 done
