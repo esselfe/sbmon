@@ -5,6 +5,12 @@
 # Currently there's cpu, disk, memory and networking usage.
 # Written by Stephane Fontaine (esselfe) under the GPLv3.
 
+SBMON_VERSION="0.1.0"
+if [ "$1" = "-V" -o "$1" = "--version" ]; then
+    echo "sbmon $SBMON_VERSION"
+    exit 0
+fi
+
 SBMON_SYS_CONFIG_FILE="/etc/sway/sbmon.conf"
 [ -f "$SBMON_SYS_CONFIG_FILE" ] && source "$SBMON_SYS_CONFIG_FILE"
 
