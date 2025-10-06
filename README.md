@@ -7,7 +7,7 @@ Currently there's cpu, disk, memory and networking usage.
 
 ---
 
-![Screenshot](sbmon-20251005.png)  
+![sbmon-20251005.png](https://raw.githubusercontent.com/esselfe/sbmon/refs/heads/main/sbmon-20251005.png)  
 
 ---
 
