@@ -31,6 +31,7 @@ fi
 # SLEEP_TIME controls for how long to wait before the next loop iteration
 # Other potential sleep times are 10, 3, 0.5 or 0.2
 [ -z "$SLEEP_TIME" ] && SLEEP_TIME=1
+SLEEP_MSEC=$(echo "scale=0; $SLEEP_TIME * 1000" | bc)
 
 # See 'man 3 sysconf' for the _SC_CLK_TCK system spec.
 CPU_USER_HZ=100
@@ -57,7 +58,7 @@ CPU_PERCENT_PER_CELL=$((100 / $ITEM_WIDTH))
 DISK_IO_MSEC=$(awk '{ print $10 }' /sys/block/$DISK_DEVICE/stat)
 DISK_IO_MSEC_PREV=$DISK_IO_MSEC
 DISK_IO_MSEC_DIFF=0
-DISK_IO_MSEC_PER_CELL=$((1000 / ITEM_WIDTH))
+DISK_IO_MSEC_PER_CELL=$((SLEEP_MSEC / ITEM_WIDTH))
 
 MEM_KB_TOTAL=$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)
 MEM_MB_TOTAL=$((MEM_KB_TOTAL / 1024))
