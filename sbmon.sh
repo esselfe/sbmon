@@ -31,7 +31,8 @@ fi
 # SLEEP_TIME controls for how long to wait before the next loop iteration
 # Other potential sleep times are 10, 3, 0.5 or 0.2
 [ -z "$SLEEP_TIME" ] && SLEEP_TIME=1
-SLEEP_MSEC=$(echo "scale=0; $SLEEP_TIME * 1000" | bc)
+SLEEP_MSEC=$(echo "$SLEEP_TIME * 1000" | bc | sed "s/\.[0-9]*//")
+SLEEP_MSEC=$(( (SLEEP_MSEC > 0 ? SLEEP_MSEC : 100) ))
 
 # See 'man 3 sysconf' for the _SC_CLK_TCK system spec.
 CPU_USER_HZ=100
