@@ -23,10 +23,14 @@ if [ -z "$NO_UTF8" ]; then
     [ -z "$CELL_BUSY" ] && CELL_BUSY='█'
     [ -z "$CELL_BUFFER" ] && CELL_BUFFER='▓'
     [ -z "$CELL_IDLE" ] && CELL_IDLE='▒'
+    [ -z "$CELL_READ" ] && CELL_READ='◀'
+    [ -z "$CELL_WRITE" ] && CELL_WRITE='▶'
 else
     [ -z "$CELL_BUSY" ] && CELL_BUSY='#'
     [ -z "$CELL_BUFFER" ] && CELL_BUFFER='@'
     [ -z "$CELL_IDLE" ] && CELL_IDLE='='
+    [ -z "$CELL_READ" ] && CELL_READ='<'
+    [ -z "$CELL_WRITE" ] && CELL_WRITE='>'
 fi
 [ -z "$TIMESTRFMT" ] && TIMESTRFMT='%A %Y-%m-%d %H:%M:%S'
 
@@ -40,21 +44,23 @@ SLEEP_MSEC=$(( (SLEEP_MSEC > 0 ? SLEEP_MSEC : 100) ))
 CPU_USER_HZ=100
 CPU_CORES=$(nproc)
 
-CPU_TICKS_BUSY=$(head -n1 /proc/stat |
+CPU_PERCENT=0
+CPU_PERCENT_PER_CELL=$((100 / $ITEM_WIDTH))
+
+CPU_STAT_LINE="$(head -n1 /proc/stat)"
+
+CPU_TICKS_BUSY=$(echo "$CPU_STAT_LINE" |
   awk '{ print ( $2 + $3 + $4 + $6 + $7 + $8 + $9 + $10 ) * 100 }')
 CPU_TICKS_BUSY_PREV=$CPU_TICKS_BUSY
 CPU_TICKS_BUSY_DIFF=0
 
-CPU_TICKS_IDLE=$(head -n1 /proc/stat | awk '{ print $5 * 100 }')
+CPU_TICKS_IDLE=$(echo "$CPU_STAT_LINE" | awk '{ print $5 * 100 }')
 CPU_TICKS_IDLE_PREV=$CPU_TICKS_IDLE
 CPU_TICKS_IDLE_DIFF=0
 
 CPU_TICKS_TOTAL=$((CPU_TICKS_BUSY + CPU_TICKS_IDLE))
 CPU_TICKS_TOTAL_PREV=$CPU_TICKS_TOTAL
 CPU_TICKS_TOTAL_DIFF=0
-
-CPU_PERCENT=0
-CPU_PERCENT_PER_CELL=$((100 / $ITEM_WIDTH))
 
 [ -z "$DISK_DEVICE" ] && DISK_DEVICE=sda
 #[ -z "$DISK_DEVICE" ] && DISK_DEVICE=nvme0n1
@@ -81,19 +87,26 @@ MEM_MB_PER_CELL=$((MEM_MB_TOTAL / ITEM_WIDTH))
 # See your available devices in /sys/class/net
 # Autodetect based on the configured route.
 [ -z "$NET_DEVICE" ] &&
-	NET_DEVICE="$(ip route show default | grep -Eo ' dev [a-z0-9]+ ' | sed 's/ dev //;s/ //g' | tr -d '\n')"
+	NET_DEVICE="$(ip route show default |
+	  grep -Eo '[[:space:]]+dev[[:space:]]+[a-zA-Z0-9@-_.:]+[[:space:]]+' |
+	    sed 's/ dev //;s/[[:space:]]//g' | tr -d '\n')"
+#NET_DEVICE=lo
 #NET_DEVICE=eth0
 #NET_DEVICE=wlan0
 #NET_DEVICE=enp3s0
 #NET_DEVICE=wlp12s0
 
 [ -z "$NET_RXTX_MAX" ] && NET_RXTX_MAX=1500000
-NET_RX_BYTES=0
-NET_TX_BYTES=0
-NET_TOTAL_BYTES=0
-NET_BYTES_PREV=0
-NET_BYTES_DIFF=0
 NET_BYTES_PER_CELL=$((NET_RXTX_MAX / ITEM_WIDTH))
+NET_RX_BYTES=$(cat /sys/class/net/$NET_DEVICE/statistics/rx_bytes)
+NET_TX_BYTES=$(cat /sys/class/net/$NET_DEVICE/statistics/tx_bytes)
+NET_RX_PREV=$NET_RX_BYTES
+NET_TX_PREV=$NET_TX_BYTES
+NET_RX_DIFF=0
+NET_TX_DIFF=0
+NET_TOTAL_BYTES=$((NET_RX_BYTES + NET_TX_BYTES))
+NET_TOTAL_PREV=$NET_TOTAL_BYTES
+NET_TOTAL_DIFF=0
 
 update_cpu() {
 	CPU_STAT_LINE="$(head -n1 /proc/stat)"
@@ -137,11 +150,16 @@ update_mem() {
 update_mem
 
 update_net() {
-	NET_RX_BYTES=`cat /sys/class/net/$NET_DEVICE/statistics/rx_bytes`
-	NET_TX_BYTES=`cat /sys/class/net/$NET_DEVICE/statistics/tx_bytes`
+	NET_RX_BYTES=$(cat /sys/class/net/$NET_DEVICE/statistics/rx_bytes)
+	NET_TX_BYTES=$(cat /sys/class/net/$NET_DEVICE/statistics/tx_bytes)
+	NET_RX_DIFF=$((NET_RX_BYTES - NET_RX_PREV))
+	NET_TX_DIFF=$((NET_TX_BYTES - NET_TX_PREV))
+	NET_RX_PREV=$NET_RX_BYTES
+	NET_TX_PREV=$NET_TX_BYTES
+
 	NET_TOTAL_BYTES=$((NET_RX_BYTES + NET_TX_BYTES))
-	NET_BYTES_DIFF=$((NET_TOTAL_BYTES - NET_BYTES_PREV))
-	NET_BYTES_PREV=$NET_TOTAL_BYTES
+	NET_TOTAL_DIFF=$((NET_TOTAL_BYTES - NET_TOTAL_PREV))
+	NET_TOTAL_PREV=$NET_TOTAL_BYTES
 }
 update_net
 
@@ -196,8 +214,13 @@ while true; do
 	NET_STR=""
 	cnt=1
 	while [[ $cnt -le $ITEM_WIDTH ]]; do
-		[[ $((cnt * NET_BYTES_PER_CELL)) -gt $NET_BYTES_DIFF ]] && break;
-		NET_STR+="$CELL_BUSY"
+		[[ $((cnt * NET_BYTES_PER_CELL)) -gt $NET_RX_DIFF ]] && break;
+		NET_STR+="$CELL_READ"
+		((++cnt))
+	done
+	while [[ $cnt -le $ITEM_WIDTH ]]; do
+		[[ $((cnt * NET_BYTES_PER_CELL)) -gt $((NET_RX_DIFF + NET_TX_DIFF)) ]] && break;
+		NET_STR+="$CELL_WRITE"
 		((++cnt))
 	done
 	while [[ $cnt -le $ITEM_WIDTH ]]; do
@@ -206,7 +229,7 @@ while true; do
 	done
 
 	if [[ "$SHOW_LABELS" == "1" ]]; then
-		printf "CPU: $CPU_STR Mem: $MEM_STR Disk: $DISK_STR Net: $NET_STR $CURRENT_TIME\n"
+		printf "CPU:$CPU_STR Mem:$MEM_STR Disk:$DISK_STR Net:$NET_STR $CURRENT_TIME\n"
 	else
 		printf "$CPU_STR $MEM_STR $DISK_STR $NET_STR $CURRENT_TIME\n"
 	fi
