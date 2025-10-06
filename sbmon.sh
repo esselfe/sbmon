@@ -21,9 +21,11 @@ SBMON_USR_CONFIG_FILE="$HOME/.config/sway/sbmon.conf"
 [ -z "$SHOW_LABELS" ] && SHOW_LABELS="1"
 if [ -z "$NO_UTF8" ]; then
     [ -z "$CELL_BUSY" ] && CELL_BUSY='█'
+    [ -z "$CELL_BUFFER" ] && CELL_BUFFER='▓'
     [ -z "$CELL_IDLE" ] && CELL_IDLE='▒'
 else
     [ -z "$CELL_BUSY" ] && CELL_BUSY='#'
+    [ -z "$CELL_BUFFER" ] && CELL_BUFFER='@'
     [ -z "$CELL_IDLE" ] && CELL_IDLE='='
 fi
 [ -z "$TIMESTRFMT" ] && TIMESTRFMT='%A %Y-%m-%d %H:%M:%S'
@@ -63,8 +65,16 @@ DISK_IO_MSEC_PER_CELL=$((SLEEP_MSEC / ITEM_WIDTH))
 
 MEM_KB_TOTAL=$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)
 MEM_MB_TOTAL=$((MEM_KB_TOTAL / 1024))
+
 MEM_KB_FREE=$(awk '/^MemAvailable:/ { print $2 }' /proc/meminfo)
 MEM_MB_FREE=$((MEM_KB_FREE / 1024))
+
+MEM_KB_BUFFER=$(awk '/^Buffers:/ { print $2 }' /proc/meminfo)
+MEM_MB_BUFFER=$((MEM_KB_BUFFER / 1024))
+
+MEM_KB_CACHED=$(awk '/^Cached:/ { print $2 }' /proc/meminfo)
+MEM_MB_CACHED=$((MEM_KB_CACHED / 1024))
+
 MEM_MB_USED=$((MEM_MB_TOTAL - MEM_MB_FREE))
 MEM_MB_PER_CELL=$((MEM_MB_TOTAL / ITEM_WIDTH))
 
@@ -118,8 +128,11 @@ update_mem() {
 	MEM_MB_TOTAL=$((MEM_KB_TOTAL / 1024))
 	MEM_KB_FREE=$(echo "$MEM_INFO" | awk '/^MemAvailable:/ { print $2 }')
 	MEM_MB_FREE=$((MEM_KB_FREE / 1024))
+	MEM_KB_BUFFER=$(echo "$MEM_INFO" | awk '/^Buffers:/ { print $2 }')
+	MEM_MB_BUFFER=$((MEM_KB_BUFFER / 1024))
+	MEM_KB_CACHED=$(echo "$MEM_INFO" | awk '/^Cached:/ { print $2 }')
+	MEM_MB_CACHED=$((MEM_KB_CACHED / 1024))
 	MEM_MB_USED=$((MEM_MB_TOTAL - MEM_MB_FREE))
-	MEM_MB_PER_CELL=$((MEM_MB_TOTAL / ITEM_WIDTH))
 }
 update_mem
 
@@ -167,6 +180,11 @@ while true; do
 	while [[ $cnt -le $ITEM_WIDTH ]]; do
 		[[ $((cnt * MEM_MB_PER_CELL)) -gt $MEM_MB_USED ]] && break;
 		MEM_STR+="$CELL_BUSY"
+		((++cnt))
+	done
+	while [[ $cnt -le $ITEM_WIDTH ]]; do
+		[[ $((cnt * MEM_MB_PER_CELL)) -gt $((MEM_MB_USED + MEM_MB_BUFFER + MEM_MB_CACHED)) ]] && break;
+		MEM_STR+="$CELL_BUFFER"
 		((++cnt))
 	done
 	while [[ $cnt -le $ITEM_WIDTH ]]; do
