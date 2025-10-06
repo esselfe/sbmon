@@ -5,7 +5,7 @@
 # Currently there's cpu, disk, memory and networking usage.
 # Written by Stephane Fontaine (esselfe) under the GPLv3.
 
-SBMON_VERSION="0.1.0"
+SBMON_VERSION="0.1.1"
 if [ "$1" = "-V" -o "$1" = "--version" ]; then
     echo "sbmon $SBMON_VERSION"
     exit 0
