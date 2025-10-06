@@ -5,8 +5,11 @@
 # Currently there's cpu, disk, memory and networking usage.
 # Written by Stephane Fontaine (esselfe) under the GPLv3.
 
-SBMON_CONFIG_FILE="$HOME/.config/sway/sbmon.conf"
-[ -f "$SBMON_CONFIG_FILE" ] && source "$SBMON_CONFIG_FILE"
+SBMON_SYS_CONFIG_FILE="/etc/sway/sbmon.conf"
+[ -f "$SBMON_SYS_CONFIG_FILE" ] && source "$SBMON_SYS_CONFIG_FILE"
+
+SBMON_USR_CONFIG_FILE="$HOME/.config/sway/sbmon.conf"
+[ -f "$SBMON_USR_CONFIG_FILE" ] && source "$SBMON_USR_CONFIG_FILE"
 
 [ -z "$ITEM_WIDTH" ] && ITEM_WIDTH=20
 [ -z "$SHOW_LABELS" ] && SHOW_LABELS="1"
