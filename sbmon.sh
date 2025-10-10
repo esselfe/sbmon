@@ -32,7 +32,7 @@ else
     [ -z "$CELL_READ" ] && CELL_READ='<'
     [ -z "$CELL_WRITE" ] && CELL_WRITE='>'
 fi
-[ -z "$TIMESTRFMT" ] && TIMESTRFMT='%A %Y-%m-%d %H:%M:%S'
+[ -z "$TIMESTRFMT" ] && TIMESTRFMT='%A %Y-%m-%d %H:%M:%S.%2N'
 
 # SLEEP_TIME controls for how long to wait before the next loop iteration
 # Other potential sleep times are 10, 3, 0.5 or 0.2
