@@ -97,7 +97,10 @@ MEM_MB_PER_CELL=$((MEM_MB_TOTAL / ITEM_WIDTH))
 #NET_DEVICE=wlp12s0
 
 [ -z "$NET_RXTX_MAX" ] && NET_RXTX_MAX=1500000
-NET_BYTES_PER_CELL=$((NET_RXTX_MAX / ITEM_WIDTH))
+# Adjust max bytes to the wanted sleep time, so if the maximum is 2MB per second
+# and sleep time is 0.5 second, then the maximum per 0.5s is 1MB
+NET_RXTX_MAX2=$(echo "$NET_RXTX_MAX * $SLEEP_TIME" | bc | sed 's/\..*//')
+NET_BYTES_PER_CELL=$((NET_RXTX_MAX2 / ITEM_WIDTH))
 NET_RX_BYTES=$(cat /sys/class/net/$NET_DEVICE/statistics/rx_bytes)
 NET_TX_BYTES=$(cat /sys/class/net/$NET_DEVICE/statistics/tx_bytes)
 NET_RX_PREV=$NET_RX_BYTES
