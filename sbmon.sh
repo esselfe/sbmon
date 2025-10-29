@@ -19,6 +19,7 @@ SBMON_USR_CONFIG_FILE="$HOME/.config/sway/sbmon.conf"
 
 [ -z "$ITEM_WIDTH" ] && ITEM_WIDTH=20
 [ -z "$SHOW_LABELS" ] && SHOW_LABELS="1"
+[ -z "$SHOW_PERCENT" ] && SHOW_PERCENT="0"
 if [ -z "$NO_UTF8" ]; then
     [ -z "$CELL_BUSY" ] && CELL_BUSY='█'
     [ -z "$CELL_BUFFER" ] && CELL_BUFFER='▓'
@@ -68,6 +69,7 @@ DISK_IO_MSEC=$(awk '{ print $10 }' /sys/block/$DISK_DEVICE/stat)
 DISK_IO_MSEC_PREV=$DISK_IO_MSEC
 DISK_IO_MSEC_DIFF=0
 DISK_IO_MSEC_PER_CELL=$((SLEEP_MSEC / ITEM_WIDTH))
+DISK_PERCENT=0
 
 MEM_KB_TOTAL=$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)
 MEM_MB_TOTAL=$((MEM_KB_TOTAL / 1024))
@@ -83,6 +85,7 @@ MEM_MB_CACHED=$((MEM_KB_CACHED / 1024))
 
 MEM_MB_USED=$((MEM_MB_TOTAL - MEM_MB_FREE))
 MEM_MB_PER_CELL=$((MEM_MB_TOTAL / ITEM_WIDTH))
+MEM_PERCENT=0
 
 # See your available devices in /sys/class/net
 # Autodetect based on the configured route.
@@ -110,6 +113,7 @@ NET_TX_DIFF=0
 NET_TOTAL_BYTES=$((NET_RX_BYTES + NET_TX_BYTES))
 NET_TOTAL_PREV=$NET_TOTAL_BYTES
 NET_TOTAL_DIFF=0
+NET_PERCENT=0
 
 update_cpu() {
 	CPU_STAT_LINE="$(head -n1 /proc/stat)"
@@ -135,6 +139,8 @@ update_disk() {
 	DISK_IO_MSEC=$(awk '{ print $10 }' /sys/block/$DISK_DEVICE/stat)
 	DISK_IO_MSEC_DIFF=$((DISK_IO_MSEC - DISK_IO_MSEC_PREV))
 	DISK_IO_MSEC_PREV=$DISK_IO_MSEC
+	DISK_PERCENT=$(echo "scale=0; $DISK_IO_MSEC_DIFF * 100 / $SLEEP_MSEC" | bc)
+	[[ $DISK_PERCENT -gt 100 ]] && DISK_PERCENT=100
 }
 update_disk
 
@@ -149,6 +155,7 @@ update_mem() {
 	MEM_KB_CACHED=$(echo "$MEM_INFO" | awk '/^Cached:/ { print $2 }')
 	MEM_MB_CACHED=$((MEM_KB_CACHED / 1024))
 	MEM_MB_USED=$((MEM_MB_TOTAL - MEM_MB_FREE))
+	MEM_PERCENT=$(echo "scale=0; $MEM_MB_USED * 100 / $MEM_MB_TOTAL" | bc)
 }
 update_mem
 
@@ -163,6 +170,7 @@ update_net() {
 	NET_TOTAL_BYTES=$((NET_RX_BYTES + NET_TX_BYTES))
 	NET_TOTAL_DIFF=$((NET_TOTAL_BYTES - NET_TOTAL_PREV))
 	NET_TOTAL_PREV=$NET_TOTAL_BYTES
+	NET_PERCENT=$(echo "scale=0; $NET_TOTAL_DIFF * 100 / $NET_RXTX_MAX2" | bc)
 }
 update_net
 
@@ -231,10 +239,22 @@ while true; do
 		((++cnt))
 	done
 
-	if [[ "$SHOW_LABELS" == "1" ]]; then
-		printf "CPU:$CPU_STR Mem:$MEM_STR Disk:$DISK_STR Net:$NET_STR $CURRENT_TIME\n"
+	if [[ "$SHOW_PERCENT" == "1" ]]; then
+		CPU_PERCENT_STR=$(printf "%3d%%" ${CPU_PERCENT})
+		MEM_PERCENT_STR=$(printf "%3d%%" ${MEM_PERCENT})
+		DISK_PERCENT_STR=$(printf "%3d%%" ${DISK_PERCENT})
+		NET_PERCENT_STR=$(printf "%3d%%" ${NET_PERCENT})
 	else
-		printf "$CPU_STR $MEM_STR $DISK_STR $NET_STR $CURRENT_TIME\n"
+		CPU_PERCENT_STR=""
+		MEM_PERCENT_STR=""
+		DISK_PERCENT_STR=""
+		NET_PERCENT_STR=""
+	fi
+
+	if [[ "$SHOW_LABELS" == "1" ]]; then
+		printf "%s\n" "CPU:$CPU_STR$CPU_PERCENT_STR Mem:$MEM_STR$MEM_PERCENT_STR Disk:$DISK_STR$DISK_PERCENT_STR Net:$NET_STR$NET_PERCENT_STR $CURRENT_TIME"
+	else
+		printf "%s\n" "$CPU_STR$CPU_PERCENT_STR $MEM_STR$MEM_PERCENT_STR $DISK_STR$DISK_PERCENT_STR $NET_STR$NET_PERCENT_STR $CURRENT_TIME"
 	fi
 
 	sleep $SLEEP_TIME
