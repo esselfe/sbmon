@@ -11,11 +11,13 @@ if [ "$1" = "-V" -o "$1" = "--version" ]; then
     exit 0
 fi
 
-SBMON_SYS_CONFIG_FILE="/etc/sway/sbmon.conf"
-[ -f "$SBMON_SYS_CONFIG_FILE" ] && source "$SBMON_SYS_CONFIG_FILE"
-
+# Prefer user config first
 SBMON_USR_CONFIG_FILE="$HOME/.config/sway/sbmon.conf"
 [ -f "$SBMON_USR_CONFIG_FILE" ] && source "$SBMON_USR_CONFIG_FILE"
+
+# Then system wide if any
+SBMON_SYS_CONFIG_FILE="/etc/sway/sbmon.conf"
+[ -f "$SBMON_SYS_CONFIG_FILE" ] && source "$SBMON_SYS_CONFIG_FILE"
 
 [ -z "$ITEM_WIDTH" ] && ITEM_WIDTH=20
 [ -z "$SHOW_LABELS" ] && SHOW_LABELS="1"
